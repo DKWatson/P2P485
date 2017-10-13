@@ -296,8 +296,9 @@ void sendPacket(char *_cptr)
     if(_cptr[0] == '/')
     {
         _dest = source_addr;
-        _cptr[0] = 1;
-        byte _dummy = getAddress(_cptr);
+        byte i;
+        for(i = 0; i < strlen(_cptr); i++) (_cptr[i] = _cptr[i + 1]);
+        _cptr[i] = 0;
     }
     else _dest = getAddress(_cptr);
     Serial << _dest << "> " << _cptr crlf;
