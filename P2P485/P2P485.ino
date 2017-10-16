@@ -5,7 +5,7 @@
 // apengineering@yahoo.com
 //
 // There is a copyright attached to this, mostly because somebody told me I should,
-// but withe the exception of th SSerialC hack (source should have original authors)
+// but with the exception of th SSerialC hack (source should have original authors)
 // and the Dallas/Maxim crc routine, it's all been pretty much clean-room coded.
 //
 // This is intended to be free to anyone who wants to use it for non-commercial 
@@ -21,16 +21,18 @@
 // personal receipt of valid data. SAC will NOT respond to a general call. Timeouts
 // and retries will be mother's resposiblility
 //
-
+// The assumption has been made as well that the choice or need is to have your
+// network communications handled through a software UART. If you choose to port
+// to a hardware UART platform (Mega2560) there are timing issues that need to be
+// addressed so that the transmit enable pin is toggled without cutting transmissions
+// or before the receiver is ready.
+//
+//=======1=========2=========3=========4=========5=========6
+// Includes and directives
+//
 #include <SSerialC.h>
 #include <Streaming.h>
 #include <functions.h>
-
-#define     STX         2
-#define     ETX         3
-#define     ACK         6
-#define     NAK         21
-#define     ESC         27
 
 //=======1=========2=========3=========4=========5=========6
 // Macros
@@ -46,23 +48,16 @@
 #define     Clear(x)    x=0
 
 //=======1=========2=========3=========4=========5=========6
-// inline functions
+// Constants
 
-static inline void      txEnable() {bitSet(PORTB,1);}   // This hardwires DE to pin D9
-static inline void      txDisable() {bitClear(PORTB,1);}
+#define     STX         2
+#define     ETX         3
+#define     ACK         6
+#define     NAK         21
+#define     ESC         27
 
 //=======1=========2=========3=========4=========5=========6
-// Function prototypes
-
-void buildMessage(char);
-void clearInputBuffer();
-void clearNtwk();
-void clearSerial();
-void ntwkEvent();
-void processCharacter(byte);
-void processMessage(char*);
-void sendPacket(char*);
-void serialEvent();
+// structs and definitions
 
 typedef struct
 {
@@ -97,7 +92,21 @@ bit_ref flags2;
 //#define flags2.bit7
 //#define flags2.bit8
 
-SSerialC ntwk(16, 17);
+//=======1=========2=========3=========4=========5=========6
+// Function prototypes
+
+void buildMessage(char);
+void clearInputBuffer();
+void clearNtwk();
+void clearSerial();
+void ntwkEvent();
+void processCharacter(byte);
+void processMessage(char*);
+void sendPacket(char*);
+void serialEvent();
+
+//=======1=========2=========3=========4=========5=========6
+// variable declarations
 
 const byte device_id = 11;
 const byte buffer_length = 47;
@@ -107,6 +116,16 @@ byte dest_addr;
 byte max_text = (buffer_length - 7);
 
 char input_buffer[buffer_length];
+
+uint32_t ntwk_speed = 38400;
+
+//=======1=========2=========3=========4=========5=========6
+// inline functions
+
+static inline void      txEnable() {bitSet(PORTB,1);}   // This hardwires DE to pin D9
+static inline void      txDisable() {bitClear(PORTB,1);}
+
+SSerialC ntwk(16, 17);
 
 //=======1=========2=========3=========4=========5=========6
 void clearInputBuffer()
@@ -132,7 +151,7 @@ void setup()
     Set(send_crc);
     Serial.begin(57600);
     while(!Serial);
-    ntwk.begin(38400);
+    ntwk.begin(ntwk_speed);
     Serial << "P2P485\n";
     Serial << "Device ID " << device_id crlf;
 }
